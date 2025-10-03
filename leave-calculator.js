@@ -32,6 +32,9 @@ const LEAVE_ALLOTMENTS = [
 class LeaveCalculator extends HTMLElement {
   constructor() {
     super();
+    this.yearsOfService = LEAVE_ALLOTMENTS[0].yearsOfService;
+    this.hoursPerWeek = FULL_TIME_HOURS;
+    this.unusedHours = 0;
   }
 
   connectedCallback() {
@@ -103,12 +106,97 @@ class LeaveCalculator extends HTMLElement {
     const submitButton = document.createElement("button");
     submitButton.setAttribute("type", "submit");
     submitButton.innerText = "Calculate!";
+    submitButton.addEventListener('click', (e) => {
+        e.preventDefault();
+        this.displayResults();
+    })
+
+    this.resultsArea = document.createElement("div");
 
     wrapper.appendChild(yearsOfService);
     wrapper.appendChild(hoursPerWeek);
     wrapper.appendChild(unusedHours);
     wrapper.appendChild(submitButton);
+    wrapper.appendChild(this.resultsArea);
     shadow.appendChild(wrapper);
+  }
+
+  displayResults() {
+      this.resultsArea.classList.remove('calculator__no-action', 'calculator__action');
+      this.resultsArea.innerHTML = '';
+      const {
+          totalAnnualLeave,
+          leaveAwardedJan1,
+          jan1Balance,
+          carryOver,
+          maximumCarryover
+      } = this.calculateCarryover();
+      if (carryOver <= 0) {
+          this.resultsArea.classList.add('calculator__no-action');
+          this.resultsArea.innerHTML = `
+<h2>No Action Required</h2>
+<p>Your projected balance on January 1 is less or equal to your contractual carryover limit. You do not need to request any additional carryover.</p>
+`;
+      } else {
+          this.resultsArea.classList.add('calculator__action');
+          this.resultsArea.innerHTML = `
+<h2>Action Required</h2>
+<p>The total of your projected balance on December 31 plus your January 1 award amount is more than your contractual carryover limit. Your estimated carryover request amount is <strong>${carryOver} hours</strong>.</p>
+`;
+      }
+      const resultsTable = document.createElement("table");
+      const resultsCaption = document.createElement("caption");
+      resultsCaption.innerText = "Your Leave";
+      resultsTable.insertAdjacentHTML('beforeend', `
+<tr>
+    <td></td>
+    <th scope="col">Hours</th>
+    <th scope="col">Weeks</th>
+</tr>
+<tr>
+    <th scope="row">Total Annual Leave</th>
+    <td>${totalAnnualLeave}</td>
+    <td>${totalAnnualLeave / this.hoursPerWeek}</td>
+</tr>
+<tr>
+    <th scope="row">Amount of Annual Leave Awarded Jan 1</th>
+    <td>${leaveAwardedJan1}</td>
+    <td>${leaveAwardedJan1 / this.hoursPerWeek}</td>
+</tr>
+<tr>
+    <th scope="row">Estimated Balance on Jan 1</th>
+    <td>${jan1Balance}</td>
+    <td>${jan1Balance / this.hoursPerWeek}</td>
+</tr> 
+<tr>
+    <th scope="row">Maximum Carryover Limit</th>
+    <td>${maximumCarryover}</td>
+    <td>${maximumCarryover / this.hoursPerWeek}</td>
+</tr>     
+`);
+
+      this.resultsArea.appendChild(resultsTable);
+  }
+
+  calculateCarryover() {
+      const leaveAllotment = LEAVE_ALLOTMENTS.find(group => group.yearsOfService === this.yearsOfService);
+      if (!leaveAllotment) {
+          this.resultsArea.innerText = "Something has gone wrong! Did you fill out all of the fields?";
+      }
+      const totalAnnualLeave =
+          this.hoursPerWeek === FULL_TIME_HOURS
+              ? leaveAllotment.fullTimeAnnualLeave
+              : leaveAllotment.partTimeAnnualLeave;
+      const leaveAwardedJan1 = totalAnnualLeave / 2;
+      const maximumCarryover = totalAnnualLeave + this.hoursPerWeek;
+      const jan1Balance = this.unusedHours + leaveAwardedJan1;
+      return {
+          totalAnnualLeave,
+          leaveAwardedJan1,
+          maximumCarryover,
+          jan1Balance,
+          carryOver: jan1Balance - maximumCarryover
+      };
   }
 }
 
