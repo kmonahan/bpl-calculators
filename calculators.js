@@ -50,6 +50,11 @@ class CalculatorBase extends HTMLElement {
   font-weight: var(--heading-font-font-weight);
   margin-block: 0 1rem;
 }
+.calculator__inner {
+  display: grid;
+  grid-template-columns: 100%;
+  gap: 2rem;
+}
 .calculator__row {
   margin-block-end: 1rem;
 }
@@ -65,6 +70,9 @@ class CalculatorBase extends HTMLElement {
   font-family: inherit;
   font-size: inherit;
   padding-inline: 0.25rem;
+}
+.calculator__input:not([size]) {
+  inline-size: 5em;
 }
 .calculator__action,
 .calculator__no-action {
@@ -110,6 +118,35 @@ class CalculatorBase extends HTMLElement {
   font-weight: var(--heading-font-font-weight);
   padding-block: 0.5rem;
   padding-inline: 1rem;
+}
+.calculator__fieldset {
+  display: grid;
+  border: 0;
+  grid-template-columns: max-content max-content;
+  margin-inline: 0;
+  padding-inline: 0;
+}
+.calculator__legend {
+  font-family: var(--heading-font-font-family);
+  font-size: var(--large-text-size);
+  font-weight: var(--heading-font-font-weight);
+}
+.calculator__fieldset .calculator__row {
+  display: grid;
+  grid-template-columns: subgrid;
+  grid-column: 1 / span 2;
+}
+@media (width >= 1024px) {
+  .calculator__inner {
+    column-gap: 4rem;
+    grid-template-columns: max-content 1fr;
+  }
+  
+  .calculator__row {
+    align-items: center;
+    display: flex;
+    gap: 0.5rem;
+  }
 }     
 `);
     return stylesheet;
@@ -338,6 +375,8 @@ class PayoutCalculator extends CalculatorBase {
     super();
     this.salaries = [];
     this.unusedVacation = 0;
+    this.unusedSickLeave = 0;
+    this.unusedCompensatory = 0;
   }
 
   createSalaryInput(index) {
@@ -354,6 +393,7 @@ class PayoutCalculator extends CalculatorBase {
     salaryInputInput.type = "number";
     salaryInputInput.step = "1000";
     salaryInputInput.min = "0";
+    salaryInputInput.size = 10;
     salaryInputInput.addEventListener('keyup', (e) => {
       this.salaries[index] = e.target.value;
       this.clearResults();
@@ -439,7 +479,7 @@ class PayoutCalculator extends CalculatorBase {
     const unusedCompensatoryLabel = document.createElement("label");
     unusedCompensatoryLabel.classList.add("calculator__label");
     unusedCompensatoryLabel.setAttribute("for", "unusedCompensatory");
-    unusedCompensatoryLabel.innerText = `Unused Compensatory Leave (if any)`;
+    unusedCompensatoryLabel.innerHTML = `Unused Compensatory Leave <small>(if any)</small>`;
     unusedCompensatory.append(unusedCompensatoryLabel);
     const unusedCompensatoryInput = document.createElement("input");
     unusedCompensatoryInput.classList.add("calculator__input");
@@ -465,13 +505,7 @@ class PayoutCalculator extends CalculatorBase {
       this.resultsArea.classList.add('calculator__no-action');
       this.resultsArea.innerHTML = `
 <h4 class="calculator__heading">Your Estimated Payout</h4>
-<p>Your estimated payout at retirement is <strong>${totalPayout.toLocaleString("en-US", numberFormatOptions)}</strong>.</p>
-<table class="calculator__table">
-  <tr>
-    <th scope="row">Hourly average</th>
-    <td>${hourlyAverage.toLocaleString("en-US", numberFormatOptions)}</td>
-  </tr>
-</table>
+<p>Your estimated payout at retirement is <strong>${totalPayout.toLocaleString("en-US", numberFormatOptions)}</strong>. Your hourly average is ${hourlyAverage.toLocaleString("en-US", numberFormatOptions)}.</p>
 <table class="calculator__table">
   <tr>
     <td></td>
@@ -519,9 +553,12 @@ class PayoutCalculator extends CalculatorBase {
     const salaries = this.createSalaries();
     const leavePayout = this.createLeavePayout();
     const submitButton = this.createSubmitButton();
+    const innerWrapper = document.createElement("div");
+    innerWrapper.classList.add("calculator__inner");
+    innerWrapper.appendChild(salaries);
+    innerWrapper.appendChild(leavePayout);
     this.wrapper.appendChild(disclaimer);
-    this.wrapper.appendChild(salaries);
-    this.wrapper.appendChild(leavePayout);
+    this.wrapper.appendChild(innerWrapper);
     this.wrapper.appendChild(submitButton);
     this.wrapper.appendChild(this.resultsArea);
     this.shadow.appendChild(this.wrapper);
