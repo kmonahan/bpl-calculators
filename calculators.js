@@ -133,6 +133,7 @@ class CalculatorBase extends HTMLElement {
 }
 .calculator__fieldset .calculator__row {
   display: grid;
+  gap: 0.5rem;
   grid-template-columns: subgrid;
   grid-column: 1 / span 2;
 }
